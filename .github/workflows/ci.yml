@@ -1,18 +1,23 @@
-name: Checks
+name: CI
 on:
-  push:
-    branches: [main]
   pull_request:
+  workflow_call:
 permissions:
   contents: read
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          bun-version: 1.4.2
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: 1.4.4
       - name: Install dependencies
         run: HUSKY=0 bun install --frozen-lockfile
       - name: Typecheck
@@ -25,14 +30,19 @@ jobs:
         run: bun run test
       - name: Build
         run: bun run build
-      - name: Install Chromium
-        run: bunx --no-install playwright install --with-deps chromium
-      - name: End-to-end tests
-        run: bun run test:e2e
-      - uses: actions/upload-artifact@v4
+      - name: Test the programme in a browser against fake TMDB and Radarr
+        run: |
+          bunx --no-install playwright install --with-deps chromium
+          bun run test:e2e
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
-          name: browser-evidence
+          name: playwright-evidence
           path: |
             playwright-report/
             test-results/
+          retention-days: 7
+      - name: Build the production image without publishing
+        run: docker build --build-arg LISTARR_REVISION="$GITHUB_SHA" -t listarr:ci .
+      - name: Check the production image health and source revision
+        run: bash scripts/smoke-image.sh listarr:ci "$GITHUB_SHA"
