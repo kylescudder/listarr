@@ -22,5 +22,5 @@ LABEL org.opencontainers.image.source="https://github.com/kylescudder/listarr"
 LABEL org.opencontainers.image.revision=$LISTARR_REVISION
 USER bun
 EXPOSE 3211
-HEALTHCHECK --interval=20s --timeout=5s --start-period=15s --retries=3 CMD bun -e "const r = await fetch('http://127.0.0.1:3211/api/health'); process.exit(r.ok ? 0 : 1)"
+HEALTHCHECK --interval=20s --timeout=5s --start-period=15s --retries=3 CMD bun -e "const r = await fetch('http://127.0.0.1:' + (process.env.PORT || '3211') + '/api/health'); process.exit(r.ok ? 0 : 1)"
 CMD ["bun", "server/production.ts"]

@@ -45,4 +45,6 @@ jobs:
       - name: Build the production image without publishing
         run: docker build --build-arg LISTARR_REVISION="$GITHUB_SHA" -t listarr:ci .
       - name: Check the production image health and source revision
-        run: bash scripts/smoke-image.sh listarr:ci "$GITHUB_SHA"
+        run: |
+          bash scripts/smoke-image.sh listarr:ci "$GITHUB_SHA"
+          bash scripts/smoke-image.sh listarr:ci "$GITHUB_SHA" 43211
