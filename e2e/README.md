@@ -48,6 +48,14 @@ API-only cases run once in the desktop project: repeating them under a mobile
 viewport adds no coverage. UI cases run in both Chromium projects. Tests have no
 retries; failures remain failures. CI forbids focused tests.
 
+## Pull request check
+
+Every pull request runs the full desktop and mobile suite in the dedicated
+`E2E tests` job in `.github/workflows/ci.yml`, independently of the other CI checks.
+The job installs Chromium and its system dependencies, then runs
+`E2E_EVIDENCE=1 bun run test:e2e`. A failing test fails the check. The release
+workflow also calls this CI workflow, so publishing waits for both jobs.
+
 ## Evidence and provenance
 
 `artifacts/full-e2e/` (ignored) contains `run.log` in CI, `provenance.json`,
