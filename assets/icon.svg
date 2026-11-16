@@ -1,4 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="14" fill="#ea580c"/>
-  <text x="32" y="32" dy="0.35em" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, sans-serif" font-size="32" font-weight="600" fill="#ffffff">L</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <rect width="64" height="64" rx="14" fill="#092826"/>
+  <rect x="12" y="10" width="40" height="44" rx="5" fill="#e8b04b"/>
+  <path d="M22 10v44" stroke="#092826" stroke-width="3"/>
+  <path d="M16 17h2m-2 11h2m-2 11h2m-2 10h2" stroke="#092826" stroke-width="4"/>
+  <path d="M29 20h14M29 30h14M29 40h7" stroke="#092826" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="48" cy="48" r="13" fill="#d99aab" stroke="#092826" stroke-width="3"/>
+  <path d="m42 48 4 4 8-9" stroke="#092826" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
