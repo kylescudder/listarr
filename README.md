@@ -6,7 +6,7 @@ Build a hand-picked movie programme from TMDB and create a custom import list in
 
 ## Development
 
-Use Bun 1.4.2 throughout local development, CI and Docker:
+Use Bun 1.4.4 throughout local development, CI and Docker:
 
 ```sh
 bun install --frozen-lockfile
@@ -38,7 +38,9 @@ No database is needed. A draft is saved in this browser's local storage. Exporte
 
 ## Deployment
 
-Deploy this service alongside Radarr, following Sortarr's container pattern. Checks on `main` publish `ghcr.io/kylescudder/listarr:main` and a `sha-<full commit>` tag after passing. Set the repository variable `VITE_CLERK_PUBLISHABLE_KEY` before building if direct creation is enabled. It is a public build-time value; all other keys are runtime environment variables. A container build can also be run locally:
+Deploy this service alongside Radarr, following Sortarr's container pattern. Checks on `main` publish `ghcr.io/kylescudder/listarr:main` and a `sha-<full commit>` tag after passing. Release calls the same CI workflow used for pull requests, including a production image build and health/revision smoke test, then builds AMD64 and ARM64 images on native runners and publishes their shared manifest. Forge pulls the checked image; GitHub never reaches the host. CodeQL scans Actions and TypeScript on pushes, pull requests and a daily schedule.
+
+Set the repository variable `VITE_CLERK_PUBLISHABLE_KEY` before building if direct creation is enabled. It is a public build-time value; all other keys are runtime environment variables. A container build can also be run locally:
 
 ```sh
 docker build --build-arg VITE_CLERK_PUBLISHABLE_KEY="$VITE_CLERK_PUBLISHABLE_KEY" -t listarr .
