@@ -245,3 +245,25 @@ test('starts with people, filters a filmography by credit and browses studio fil
     fullPage: true
   })
 })
+
+test('returns from a profile to the same page of results', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Next', exact: true }).click()
+  await expect(page.getByText('Page 2 of 2')).toBeVisible()
+  await page
+    .getByRole('button', { name: 'Christopher Nolan', exact: true })
+    .click()
+  await expect(
+    page.getByRole('heading', { name: 'Interstellar', exact: true })
+  ).toBeVisible()
+  // An unsubmitted edit to the search box must not replace the results.
+  await page.getByLabel('Search TMDB').fill('unavailable')
+  const request = page.waitForRequest((r) => r.url().includes('/api/search'))
+  await page.getByRole('button', { name: 'Back to results' }).click()
+  expect((await request).url()).toContain('page=2')
+  await expect(page.getByText('Page 2 of 2')).toBeVisible()
+  await expect(
+    page.getByRole('heading', { name: 'People to explore', exact: true })
+  ).toBeVisible()
+  await expect(page.getByRole('alert')).toHaveCount(0)
+})

@@ -127,7 +127,7 @@ globalThis.fetch = (async (
             known_for: [films[0]]
           }
         ],
-        total_pages: 1
+        total_pages: 2
       })
     if (url.pathname.includes('/search/collection'))
       return Response.json({

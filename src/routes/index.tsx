@@ -158,7 +158,16 @@ function Programme({
             : 'Discover films'
     )
   }
+  // The results a profile was opened from, so Back returns to the same page.
+  const [returnTo, setReturnTo] = useState<{
+    endpoint: string
+    params: string
+    page: number
+    resultKind: string
+    heading: string
+  } | null>(null)
   function expand(item: Result) {
+    setReturnTo({ endpoint, params, page, resultKind, heading })
     setLoading(true)
     setResults([])
     setEndpoint(`/api/${resultKind}/${item.id}`)
@@ -168,6 +177,19 @@ function Programme({
     setPage(1)
     setResultKind('movie')
     setHeading(item.name || item.title)
+  }
+  function back() {
+    if (!returnTo) return search()
+    setLoading(true)
+    setResults([])
+    setProfile(null)
+    setCreditRole('all')
+    setEndpoint(returnTo.endpoint)
+    setParams(returnTo.params)
+    setPage(returnTo.page)
+    setResultKind(returnTo.resultKind)
+    setHeading(returnTo.heading)
+    setReturnTo(null)
   }
   function toggle(movie: Movie) {
     setNotice('')
@@ -353,7 +375,7 @@ function Programme({
       <main>
         {profile && (
           <section className='profile' aria-label='Profile'>
-            <button className='back' onClick={() => search()}>
+            <button className='back' onClick={back}>
               Back to results
             </button>
             <div className='profile-card'>
