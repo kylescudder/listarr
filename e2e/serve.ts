@@ -57,6 +57,62 @@ globalThis.fetch = (async (
             name: 'Christian Bale',
             known_for_department: 'Acting',
             known_for: [films[0]]
+          },
+          {
+            id: 1813,
+            name: 'Anne Hathaway',
+            known_for_department: 'Acting',
+            profile_path: '/s6tflSD20MGz04ZR2R1lZvhmC4Y.jpg',
+            known_for: [films[1]]
+          },
+          {
+            id: 83002,
+            name: 'Jessica Chastain',
+            known_for_department: 'Acting',
+            profile_path: '/lodMzLKSdrPcBry6TdoDsMN3Vge.jpg',
+            known_for: [films[1]]
+          },
+          {
+            id: 73968,
+            name: 'Henry Cavill',
+            known_for_department: 'Acting',
+            profile_path: '/dgTD7Q9owL3DyX9uYoSX9KZeUUz.jpg',
+            known_for: [films[0]]
+          },
+          {
+            id: 1136406,
+            name: 'Tom Holland',
+            known_for_department: 'Acting',
+            profile_path: '/tH8bNDcjiS399DlcnC5oubxNh23.jpg',
+            known_for: [films[0]]
+          },
+          {
+            id: 825,
+            name: 'Stacy Keach',
+            known_for_department: 'Acting',
+            profile_path: '/gtYepb7Vu9bXcdZ62PXm56KalNl.jpg',
+            known_for: [films[2]]
+          },
+          {
+            id: 1238316,
+            name: 'Johnny Flynn',
+            known_for_department: 'Acting',
+            profile_path: '/tS3HIDFJbD8uSLAvaxZfrPc3aM0.jpg',
+            known_for: [films[0]]
+          },
+          {
+            id: 15556,
+            name: 'Kathleen Robertson',
+            known_for_department: 'Acting',
+            profile_path: '/nGaey63oyvcZWXFEwaihGP2YryY.jpg',
+            known_for: [films[2]]
+          },
+          {
+            id: 52866,
+            name: 'Agnez Mo',
+            known_for_department: 'Acting',
+            profile_path: '/7GuBJxf5szQRCKLk3iG2ztfCo39.jpg',
+            known_for: [films[0]]
           }
         ],
         total_pages: 1

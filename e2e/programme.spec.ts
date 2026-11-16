@@ -44,11 +44,14 @@ test('builds a programme, restores the draft and exports a Radarr feed', async (
   await page
     .getByRole('button', { name: 'Add Interstellar', exact: true })
     .click()
+  await expect(page.getByRole('button', { name: 'Your list 2' })).toBeVisible()
+  await page.getByRole('button', { name: /^Your list/ }).click()
   await page.getByLabel('List name').fill('Space season')
   await page.reload()
+  await page.getByRole('button', { name: /^Your list/ }).click()
   await expect(page.getByLabel('List name')).toHaveValue('Space season')
   await expect(
-    page.getByRole('button', { name: 'Remove Dune from programme' })
+    page.getByRole('button', { name: 'Remove Dune from list' })
   ).toBeVisible()
   await page.getByRole('button', { name: 'Copy Radarr list URL' }).click()
   const url = await page.getByLabel('List URL', { exact: true }).inputValue()
@@ -63,11 +66,9 @@ test('builds a programme, restores the draft and exports a Radarr feed', async (
     path: info.outputPath('programme.png'),
     fullPage: true
   })
-  await page.getByRole('button', { name: 'Remove Dune from programme' }).click()
+  await page.getByRole('button', { name: 'Remove Dune from list' }).click()
   await page.reload()
-  await expect(
-    page.getByRole('button', { name: 'Remove Dune from programme' })
-  ).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Your list 1' })).toBeVisible()
 })
 test('explores people and collections, paginates and applies discovery filters', async ({
   page
@@ -89,7 +90,9 @@ test('explores people and collections, paginates and applies discovery filters',
   await expect(
     page.getByRole('heading', { name: 'Christopher Nolan', exact: true })
   ).toBeVisible()
-  await page.getByRole('button', { name: 'View films' }).first().click()
+  await page
+    .getByRole('button', { name: 'Christopher Nolan', exact: true })
+    .click()
   await expect(
     page.getByRole('heading', { name: 'Interstellar', exact: true })
   ).toBeVisible()
@@ -102,7 +105,9 @@ test('explores people and collections, paginates and applies discovery filters',
   await expect(
     page.getByRole('heading', { name: 'Dune Collection', exact: true })
   ).toBeVisible()
-  await page.getByRole('button', { name: 'View films' }).first().click()
+  await page
+    .getByRole('button', { name: 'Dune Collection', exact: true })
+    .click()
   await expect(
     page.getByRole('heading', { name: 'Dune', exact: true })
   ).toBeVisible()
@@ -164,6 +169,7 @@ test('handles no results, upstream failure and signed-out list creation', async 
   await page.getByLabel('Search TMDB').fill('Dune')
   await page.getByRole('button', { name: 'Search', exact: true }).click()
   await page.getByRole('button', { name: 'Add Dune', exact: true }).click()
+  await page.getByRole('button', { name: /^Your list/ }).click()
   await page
     .getByRole('button', { name: 'Create list in Radarr', exact: true })
     .click()
@@ -220,7 +226,7 @@ test('starts with people, filters a filmography by credit and browses studio fil
   await expect(
     page.getByRole('heading', { name: 'Christopher Nolan', exact: true })
   ).toBeVisible()
-  await page.locator('.directory img').evaluateAll(async (images) => {
+  await page.locator('.headshot img').evaluateAll(async (images) => {
     await Promise.all(
       images.map((image) => (image as HTMLImageElement).decode())
     )
@@ -229,7 +235,12 @@ test('starts with people, filters a filmography by credit and browses studio fil
     path: info.outputPath('people-directory.png'),
     fullPage: true
   })
-  await page.getByRole('button', { name: 'View films' }).first().click()
+  await page
+    .getByRole('button', { name: 'Christopher Nolan', exact: true })
+    .click()
+  await expect(
+    page.getByRole('heading', { name: 'Christopher Nolan', exact: true })
+  ).toBeVisible()
   await page.getByRole('button', { name: 'Directing', exact: true }).click()
   await expect(
     page.getByRole('heading', { name: 'Interstellar', exact: true })
@@ -263,7 +274,7 @@ test('starts with people, filters a filmography by credit and browses studio fil
   await expect(
     page.getByRole('heading', { name: 'A24', exact: true })
   ).toBeVisible()
-  await page.getByRole('button', { name: 'View films' }).click()
+  await page.getByRole('button', { name: 'A24', exact: true }).click()
   await expect(
     page.getByRole('heading', { name: 'Dune', exact: true })
   ).toBeVisible()
