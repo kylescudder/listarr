@@ -1,9 +1,11 @@
 import { expect, test } from '@playwright/test'
+import { showFilms } from './browse'
 
 test('hides Radarr films throughout browsing and keeps empty collections understandable', async ({
   page
 }, info) => {
   await page.goto('/')
+  await showFilms(page)
   await expect(
     page.getByText('Films already in Radarr are hidden.')
   ).toBeVisible()
@@ -27,6 +29,7 @@ test('hides Radarr films throughout browsing and keeps empty collections underst
   ).toBeVisible()
   await expect(hidden).toHaveCount(0)
   await page.reload()
+  await showFilms(page, 'space')
   await expect(
     page.getByText('Films already in Radarr are hidden.')
   ).toBeVisible()
@@ -38,7 +41,9 @@ test('hides Radarr films throughout browsing and keeps empty collections underst
   await page.getByLabel('Look for').selectOption('person')
   await page.getByLabel('Search TMDB').fill('Nolan')
   await page.getByRole('button', { name: 'Search', exact: true }).click()
-  await page.getByRole('button', { name: 'Explore films' }).click()
+  await page
+    .getByRole('button', { name: 'Christopher Nolan', exact: true })
+    .click()
   await expect(
     page.getByRole('heading', { name: 'Interstellar', exact: true })
   ).toBeVisible()
@@ -47,12 +52,10 @@ test('hides Radarr films throughout browsing and keeps empty collections underst
   await page.getByLabel('Search TMDB').fill('Owned')
   await page.getByRole('button', { name: 'Search', exact: true }).click()
   await page
-    .locator('article')
-    .filter({ hasText: 'Owned Collection' })
-    .getByRole('button', { name: 'Explore films' })
+    .getByRole('button', { name: 'Owned Collection', exact: true })
     .click()
   await expect(
-    page.getByRole('heading', { name: 'No pictures found' })
+    page.getByRole('heading', { name: 'No films to add' })
   ).toBeVisible()
   await expect(hidden).toHaveCount(0)
   await expect(

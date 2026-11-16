@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { ClerkProvider, SignInButton, UserButton, useAuth } from '@clerk/react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { listUrl } from '../list'
 import type { Movie } from '../list'
@@ -32,7 +32,13 @@ function MemberApp() {
     />
   )
 }
-type Result = Movie & { name?: string; profile_path?: string | null }
+type Result = Movie & {
+  name?: string
+  profile_path?: string | null
+  logo_path?: string | null
+  known_for_department?: string
+  known_for?: Movie[]
+}
 async function json(url: string, init?: RequestInit) {
   const res = await fetch(url, init)
   const data = await res.json()
@@ -47,8 +53,9 @@ function Programme({
   getToken?: () => Promise<string | null>
   account?: React.ReactNode
 }) {
+  const listDialog = useRef<HTMLDialogElement>(null)
   const [query, setQuery] = useState('')
-  const [kind, setKind] = useState('movie')
+  const [kind, setKind] = useState('person')
   const [genre, setGenre] = useState('')
   const [year, setYear] = useState('')
   const [sort, setSort] = useState('popularity.desc')
@@ -57,16 +64,19 @@ function Programme({
   const [page, setPage] = useState(1)
   const [pages, setPages] = useState(1)
   const [endpoint, setEndpoint] = useState('/api/search')
-  const [params, setParams] = useState('')
+  const [params, setParams] = useState('kind=person')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [heading, setHeading] = useState('Popular pictures')
-  const [resultKind, setResultKind] = useState('movie')
+  const [heading, setHeading] = useState('People to explore')
+  const [resultKind, setResultKind] = useState('person')
+  const [creditRole, setCreditRole] = useState('all')
+  const [profile, setProfile] = useState<Result | null>(null)
   const [picks, setPicks] = useState<Movie[]>([])
-  const [name, setName] = useState('My picture programme')
+  const [name, setName] = useState('My film list')
   const [ready, setReady] = useState(false)
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState('')
+  const [full, setFull] = useState(false)
   const [feed, setFeed] = useState('')
   useEffect(() => {
     try {
@@ -119,11 +129,13 @@ function Programme({
       })
     return () => controller.abort()
   }, [endpoint, params, page])
-  function search(event: FormEvent) {
-    event.preventDefault()
+  function search(event?: FormEvent) {
+    event?.preventDefault()
     setLoading(true)
     setResults([])
     setEndpoint('/api/search')
+    setProfile(null)
+    setCreditRole('all')
     setParams(
       new URLSearchParams({
         q: query,
@@ -136,26 +148,56 @@ function Programme({
     )
     setPage(1)
     setResultKind(kind)
-    setHeading(query ? `Results for “${query}”` : 'Discover pictures')
+    setHeading(
+      query
+        ? `Results for “${query}”`
+        : kind === 'person'
+          ? 'People to explore'
+          : kind === 'company'
+            ? 'Find a studio by name'
+            : 'Discover films'
+    )
   }
+  // The results a profile was opened from, so Back returns to the same page.
+  const [returnTo, setReturnTo] = useState<{
+    endpoint: string
+    params: string
+    page: number
+    resultKind: string
+    heading: string
+  } | null>(null)
   function expand(item: Result) {
+    setReturnTo({ endpoint, params, page, resultKind, heading })
     setLoading(true)
     setResults([])
     setEndpoint(`/api/${resultKind}/${item.id}`)
     setParams('')
+    setProfile(item)
+    setCreditRole('all')
     setPage(1)
     setResultKind('movie')
     setHeading(item.name || item.title)
   }
+  function back() {
+    if (!returnTo) return search()
+    setLoading(true)
+    setResults([])
+    setProfile(null)
+    setCreditRole('all')
+    setEndpoint(returnTo.endpoint)
+    setParams(returnTo.params)
+    setPage(returnTo.page)
+    setResultKind(returnTo.resultKind)
+    setHeading(returnTo.heading)
+    setReturnTo(null)
+  }
   function toggle(movie: Movie) {
     setNotice('')
+    setFull(false)
     if (picks.some((p) => p.id === movie.id))
       setPicks(picks.filter((p) => p.id !== movie.id))
     else if (picks.length < 100) setPicks([...picks, movie])
-    else
-      setNotice(
-        'A programme can contain up to 100 films. Remove one to add another.'
-      )
+    else setFull(true)
   }
   async function copy() {
     const url = listUrl(
@@ -196,7 +238,7 @@ function Programme({
       setFeed(data.url)
       setNotice(
         data.existing
-          ? 'This programme is already in Radarr.'
+          ? 'This list is already in Radarr.'
           : 'List created in Radarr. Films will be added on its next list sync; automatic search is off.'
       )
     } catch (err) {
@@ -207,337 +249,488 @@ function Programme({
       setBusy(false)
     }
   }
+  const browsingPeople = resultKind === 'person'
+  const browsingEntries = resultKind !== 'movie'
+  const noun = browsingPeople
+    ? 'people'
+    : resultKind === 'company'
+      ? 'studios'
+      : resultKind === 'collection'
+        ? 'collections'
+        : 'films'
   return (
     <div className='app'>
-      <header className='topbar'>
+      <header className='masthead'>
         <a href='/' className='brand'>
           <img src='/icon.svg' alt='' />
           Listarr
         </a>
-        <span className='house'>Scudder Picture House</span>
-        <div className='account'>
-          {account}
-          <a href='https://github.com/kylescudder/listarr'>GitHub</a>
-        </div>
-      </header>
-      <main>
-        <section className='marquee'>
-          <div className='bulbs' />
-          <div className='letterboard'>
-            <p>A double bill? A whole season? Your call.</p>
-            <h1>
-              Good pictures.
-              <br />
-              Your programme.
-            </h1>
-            <p>
-              Find films on TMDB. Put them on the bill. Make a list for Radarr.
-            </p>
-          </div>
-          <div className='bulbs' />
-        </section>
-        <div className='workspace'>
-          <section className='browse' aria-label='Find films'>
-            <form onSubmit={search} className='search-form'>
-              <label className='search-input'>
-                Search TMDB
-                <input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder='A film, a favourite actor, a collection…'
-                  maxLength={150}
-                />
-              </label>
-              <label>
-                Look for
-                <select
-                  aria-label='Look for'
-                  value={kind}
-                  onChange={(e) => setKind(e.target.value)}
-                >
-                  <option value='movie'>Films</option>
-                  <option value='person'>People</option>
-                  <option value='collection'>Collections</option>
-                </select>
-              </label>
-              <button className='gold' type='submit'>
-                Search
-              </button>
-              <details className='filters'>
-                <summary>Discover by genre, year & rating</summary>
-                <p>Leave the search box empty to explore with these filters.</p>
-                <div className='filter-fields'>
-                  <label>
-                    Genre
-                    <select
-                      aria-label='Genre'
-                      value={genre}
-                      onChange={(e) => setGenre(e.target.value)}
-                    >
-                      <option value=''>All genres</option>
-                      {[
-                        [28, 'Action'],
-                        [12, 'Adventure'],
-                        [16, 'Animation'],
-                        [35, 'Comedy'],
-                        [80, 'Crime'],
-                        [99, 'Documentary'],
-                        [18, 'Drama'],
-                        [14, 'Fantasy'],
-                        [27, 'Horror'],
-                        [10749, 'Romance'],
-                        [878, 'Science fiction'],
-                        [53, 'Thriller']
-                      ].map(([id, label]) => (
-                        <option key={id} value={id}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    Release year
-                    <input
-                      inputMode='numeric'
-                      pattern='[0-9]{4}'
-                      placeholder='Any year'
-                      value={year}
-                      maxLength={4}
-                      onChange={(e) => setYear(e.target.value)}
-                    />
-                  </label>
-                  <label>
-                    Sort by
-                    <select
-                      aria-label='Sort by'
-                      value={sort}
-                      onChange={(e) => setSort(e.target.value)}
-                    >
-                      <option value='popularity.desc'>Popular first</option>
-                      <option value='vote_average.desc'>Highest rated</option>
-                      <option value='primary_release_date.desc'>
-                        Newest first
-                      </option>
-                    </select>
-                  </label>
-                </div>
-                <button type='submit' className='quiet'>
-                  Discover films
-                </button>
-              </details>
-            </form>
-            <div className='results-heading'>
-              <h2>{heading}</h2>
-              <span>
-                {loading ? 'Loading…' : `${results.length} on this page`}
-              </span>
-            </div>
-            {!loading && !error && radarrFiltered && (
-              <p>Films already in Radarr are hidden.</p>
-            )}
-            {error ? (
-              <div role='alert' className='error'>
-                <h3>Projection paused</h3>
-                <p>{error}</p>
-                <button
-                  onClick={() => setParams(`${params}&retry=${Date.now()}`)}
-                >
-                  Try again
-                </button>
-              </div>
-            ) : loading ? (
-              <div className='empty' role='status'>
-                Finding your next picture…
-              </div>
-            ) : results.length === 0 ? (
-              <div className='empty'>
-                <h3>No pictures found</h3>
-                <p>
-                  Try another title, person or collection, or broaden your
-                  filters.
-                </p>
-              </div>
-            ) : (
-              <div className='films'>
-                {results.map((item) => {
-                  const picked = picks.some((p) => p.id === item.id)
-                  const title = item.title || item.name || 'Untitled'
-                  const image = item.poster_path || item.profile_path
-                  return (
-                    <article
-                      className={`film ${picked ? 'picked' : ''}`}
-                      key={item.id}
-                    >
-                      <div className='poster'>
-                        {image ? (
-                          <img
-                            src={`https://image.tmdb.org/t/p/w342${image}`}
-                            alt=''
-                            loading='lazy'
-                          />
-                        ) : (
-                          <span className='poster-placeholder'>
-                            Picture
-                            <br />
-                            House
-                          </span>
-                        )}
-                        {resultKind === 'movie' && (
-                          <button
-                            className='pick'
-                            aria-label={`${picked ? 'Remove' : 'Add'} ${title}`}
-                            aria-pressed={picked}
-                            onClick={() => toggle(item)}
-                          >
-                            {picked ? '✓' : '+'}
-                          </button>
-                        )}
-                      </div>
-                      <div className='film-info'>
-                        <p className='film-meta'>
-                          {item.release_date?.slice(0, 4) ||
-                            (resultKind === 'person'
-                              ? 'Filmography'
-                              : resultKind === 'collection'
-                                ? 'Collection'
-                                : 'Year unknown')}
-                          {!!item.vote_average &&
-                            ` / ★ ${item.vote_average.toFixed(1)}`}
-                        </p>
-                        <h3>{title}</h3>
-                        {resultKind !== 'movie' && (
-                          <button
-                            className='quiet'
-                            onClick={() => expand(item)}
-                          >
-                            Explore films
-                          </button>
-                        )}
-                      </div>
-                    </article>
-                  )
-                })}
-              </div>
-            )}
-            {!error && !loading && pages > 1 && (
-              <nav className='pagination' aria-label='Result pages'>
-                <button disabled={page === 1} onClick={() => setPage(page - 1)}>
-                  Previous
-                </button>
-                <span>
-                  Page {page} of {pages}
-                </span>
-                <button
-                  disabled={page === pages}
-                  onClick={() => setPage(page + 1)}
-                >
-                  Next
-                </button>
-              </nav>
-            )}
-          </section>
-          <aside className='ticket' aria-labelledby='ticket-heading'>
-            <div className='ticket-top'>
-              <span>Scudder Picture House</span>
-              <span>Admit all</span>
-            </div>
-            <h2 id='ticket-heading'>Your programme</h2>
-            <p className='ticket-intro'>
-              A hand-picked bill, ready for Radarr.
-            </p>
-            <label>
-              Programme name
-              <input
-                value={name}
-                maxLength={80}
-                onChange={(e) => setName(e.target.value)}
-              />
-            </label>
-            <div className='ticket-count'>
-              <strong>{String(picks.length).padStart(2, '0')}</strong>
-              <span>
-                of 100 films
-                <br />
-                on the bill
-              </span>
-            </div>
-            {picks.length ? (
-              <ol className='picks'>
-                {picks.map((movie) => (
-                  <li key={movie.id}>
-                    <span>{movie.title}</span>
-                    <button
-                      aria-label={`Remove ${movie.title} from programme`}
-                      onClick={() => toggle(movie)}
-                    >
-                      ×
-                    </button>
-                  </li>
-                ))}
-              </ol>
-            ) : (
-              <div className='ticket-empty'>
-                The bill is yours to fill.
-                <br />
-                Pick a film with the + button.
-              </div>
-            )}
-            <div className='ticket-stub'>
-              <button
-                className='create'
-                disabled={!picks.length || !name.trim() || busy}
-                onClick={create}
-              >
-                {busy ? 'Creating list…' : 'Create list in Radarr'}
-              </button>
-              <button className='copy' disabled={!picks.length} onClick={copy}>
-                Copy Radarr list URL
-              </button>
-              <p>
-                Creates an import list. Automatic search stays off. Your draft
-                is saved in this browser.
-              </p>
-              {notice && (
-                <p role='status' className='notice'>
-                  {notice}
-                </p>
-              )}
-              {feed && (
+        <form onSubmit={search} className='search-form' role='search'>
+          <label className='search-input'>
+            <span className='sr-only'>Search TMDB</span>
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={
+                kind === 'person'
+                  ? 'Search actors and directors'
+                  : kind === 'company'
+                    ? 'Search studios, e.g. A24'
+                    : kind === 'collection'
+                      ? 'Search collections'
+                      : 'Search films, or leave empty to discover'
+              }
+              maxLength={150}
+            />
+          </label>
+          <select
+            aria-label='Look for'
+            value={kind}
+            onChange={(e) => setKind(e.target.value)}
+          >
+            <option value='person'>People</option>
+            <option value='movie'>Films</option>
+            <option value='company'>Studios</option>
+            <option value='collection'>Collections</option>
+          </select>
+          <button className='search-submit' type='submit'>
+            Search
+          </button>
+          {kind === 'movie' && (
+            <details className='filters'>
+              <summary>Discover by genre, year & rating</summary>
+              <div className='filter-fields'>
                 <label>
-                  List URL
+                  Genre
+                  <select
+                    aria-label='Genre'
+                    value={genre}
+                    onChange={(e) => setGenre(e.target.value)}
+                  >
+                    <option value=''>All genres</option>
+                    {[
+                      [28, 'Action'],
+                      [12, 'Adventure'],
+                      [16, 'Animation'],
+                      [35, 'Comedy'],
+                      [80, 'Crime'],
+                      [99, 'Documentary'],
+                      [18, 'Drama'],
+                      [14, 'Fantasy'],
+                      [27, 'Horror'],
+                      [10749, 'Romance'],
+                      [878, 'Science fiction'],
+                      [53, 'Thriller']
+                    ].map(([id, label]) => (
+                      <option key={id} value={id}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Release year
                   <input
-                    readOnly
-                    value={feed}
-                    onFocus={(e) => e.target.select()}
+                    inputMode='numeric'
+                    pattern='[0-9]{4}'
+                    placeholder='Any year'
+                    value={year}
+                    maxLength={4}
+                    onChange={(e) => setYear(e.target.value)}
                   />
                 </label>
-              )}
+                <label>
+                  Sort by
+                  <select
+                    aria-label='Sort by'
+                    value={sort}
+                    onChange={(e) => setSort(e.target.value)}
+                  >
+                    <option value='popularity.desc'>Popular first</option>
+                    <option value='vote_average.desc'>Highest rated</option>
+                    <option value='primary_release_date.desc'>
+                      Newest first
+                    </option>
+                  </select>
+                </label>
+                <button type='submit' className='discover-submit'>
+                  Discover films
+                </button>
+              </div>
+            </details>
+          )}
+        </form>
+        <button
+          className='list-open'
+          aria-haspopup='dialog'
+          onClick={() => listDialog.current?.showModal()}
+        >
+          Your list
+          <span key={picks.length} className='list-count'>
+            {picks.length}
+          </span>
+        </button>
+        <div className='account'>{account}</div>
+      </header>
+      <main>
+        {profile && (
+          <section className='profile' aria-label='Profile'>
+            <button className='back' onClick={back}>
+              Back to results
+            </button>
+            <div className='profile-card'>
+              <div className='profile-portrait' aria-hidden='true'>
+                {profile.profile_path || profile.logo_path ? (
+                  <img
+                    src={`https://image.tmdb.org/t/p/w342${profile.profile_path || profile.logo_path}`}
+                    alt=''
+                  />
+                ) : (
+                  <span>{initials(profile.name || profile.title)}</span>
+                )}
+              </div>
+              <div className='profile-text'>
+                <p className='profile-role'>
+                  {(profile.known_for_department &&
+                    (departments[profile.known_for_department] ||
+                      profile.known_for_department)) ||
+                    (endpoint.includes('/company/')
+                      ? 'Studio'
+                      : endpoint.includes('/collection/')
+                        ? 'Collection'
+                        : 'Filmography')}
+                </p>
+                <h1 className='profile-name'>
+                  <Name
+                    text={profile.name || profile.title}
+                    split={endpoint.includes('/person/')}
+                  />
+                </h1>
+                {endpoint.includes('/person/') && (
+                  <div
+                    className='credit-tabs'
+                    role='group'
+                    aria-label='Filmography credits'
+                  >
+                    {[
+                      ['all', 'All films'],
+                      ['acting', 'Acting'],
+                      ['directing', 'Directing']
+                    ].map(([value, label]) => (
+                      <button
+                        key={value}
+                        aria-pressed={creditRole === value}
+                        onClick={() => {
+                          setCreditRole(value)
+                          setParams(`role=${value}`)
+                        }}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          </aside>
+          </section>
+        )}
+        <div className='results-heading'>
+          {profile ? (
+            <h2>Films</h2>
+          ) : (
+            <h1 className='directory-heading'>{heading}</h1>
+          )}
+          <span>
+            {loading
+              ? 'Loading…'
+              : results.length
+                ? `${results.length} ${results.length === 1 ? singular[noun] : noun}${pages > 1 ? `, page ${page}` : ''}`
+                : ''}
+          </span>
         </div>
-        <footer>
-          <a href='https://www.themoviedb.org/' className='tmdb'>
-            <svg
-              viewBox='0 0 120 18'
-              width='100'
-              role='img'
-              aria-label='The Movie Database'
-            >
-              <text x='0' y='15' fill='#90cea1' fontSize='18' fontWeight='bold'>
-                TMDB
-              </text>
-              <rect x='62' y='2' width='55' height='14' rx='7' fill='#01b4e4' />
-            </svg>
-          </a>
-          <p>
-            This product uses the TMDB API but is not endorsed or certified by
-            TMDB.
+        {full && (
+          <p role='status' className='limit-note'>
+            Your list is full at 100 films. Remove one to add another.
           </p>
-          <a href='https://github.com/kylescudder/sortarr'>
-            Also at the Picture House: Sortarr
-          </a>
-        </footer>
+        )}
+        {!loading && !error && radarrFiltered && (
+          <p className='radarr-note'>Films already in Radarr are hidden.</p>
+        )}
+        {error ? (
+          <div role='alert' className='message'>
+            <h3>Could not load the directory</h3>
+            <p>{error}</p>
+            <button onClick={() => setParams(`${params}&retry=${Date.now()}`)}>
+              Try again
+            </button>
+          </div>
+        ) : loading ? (
+          <div className='message' role='status'>
+            Searching the directory…
+          </div>
+        ) : results.length === 0 ? (
+          <div className='message'>
+            {profile ? (
+              <>
+                <h3>No films to add</h3>
+                <p>
+                  {radarrFiltered
+                    ? 'Every film here is already in Radarr, or none match this filter.'
+                    : 'No films match this filter.'}
+                </p>
+              </>
+            ) : (
+              <>
+                <h3>No results found</h3>
+                <p>
+                  Check the spelling, or search for{' '}
+                  {kind === 'person' ? 'a film or studio' : 'a person'} instead.
+                </p>
+              </>
+            )}
+          </div>
+        ) : browsingEntries ? (
+          <div className={`directory ${browsingPeople ? 'faces' : 'names'}`}>
+            {results.map((item) => {
+              const title = item.name || item.title || 'Untitled'
+              const image = item.profile_path || item.logo_path
+              const credits = item.known_for
+                ?.map((film) => film.title)
+                .filter(Boolean)
+                .join(', ')
+              return (
+                <article className='entry' key={item.id}>
+                  {browsingPeople && (
+                    <div className='headshot' aria-hidden='true'>
+                      {image ? (
+                        <img
+                          src={`https://image.tmdb.org/t/p/w342${image}`}
+                          alt=''
+                          loading='eager'
+                        />
+                      ) : (
+                        <span>{initials(title)}</span>
+                      )}
+                    </div>
+                  )}
+                  <h3>
+                    <button className='entry-name' onClick={() => expand(item)}>
+                      <Name text={title} split={browsingPeople} />
+                    </button>
+                  </h3>
+                  {browsingPeople && item.known_for_department && (
+                    <p className='entry-role'>
+                      {departments[item.known_for_department] ||
+                        item.known_for_department}
+                    </p>
+                  )}
+                  {credits && <p className='entry-credits'>{credits}</p>}
+                  {!browsingPeople && (
+                    <p className='entry-credits'>View films</p>
+                  )}
+                </article>
+              )
+            })}
+          </div>
+        ) : (
+          <div className='films'>
+            {results.map((item) => {
+              const picked = picks.some((p) => p.id === item.id)
+              const title = item.title || item.name || 'Untitled'
+              return (
+                <article
+                  className={`film ${picked ? 'picked' : ''}`}
+                  key={item.id}
+                >
+                  <div className='poster'>
+                    {item.poster_path ? (
+                      <img
+                        src={`https://image.tmdb.org/t/p/w342${item.poster_path}`}
+                        alt=''
+                        loading='eager'
+                      />
+                    ) : (
+                      <span>{initials(title)}</span>
+                    )}
+                    <button
+                      className='pick'
+                      aria-label={`${picked ? 'Remove' : 'Add'} ${title}`}
+                      aria-pressed={picked}
+                      onClick={() => toggle(item)}
+                    >
+                      {picked ? '✓' : '+'}
+                    </button>
+                  </div>
+                  <h3>{title}</h3>
+                  <p className='film-meta'>
+                    {item.release_date?.slice(0, 4) || 'Year unknown'}
+                    {!!item.vote_average && (
+                      <span>★ {item.vote_average.toFixed(1)}</span>
+                    )}
+                  </p>
+                </article>
+              )
+            })}
+          </div>
+        )}
+        {!error && !loading && pages > 1 && (
+          <nav className='pagination' aria-label='Result pages'>
+            <button disabled={page === 1} onClick={() => setPage(page - 1)}>
+              Previous
+            </button>
+            <span>
+              Page {page} of {pages}
+            </span>
+            <button disabled={page === pages} onClick={() => setPage(page + 1)}>
+              Next
+            </button>
+          </nav>
+        )}
       </main>
+      <dialog
+        ref={listDialog}
+        className='list-drawer'
+        aria-labelledby='list-heading'
+        onClick={(event) => {
+          if (event.target === event.currentTarget) event.currentTarget.close()
+        }}
+      >
+        <div className='drawer'>
+          <div className='drawer-head'>
+            <h2 id='list-heading'>Your list</h2>
+            <button
+              className='close'
+              aria-label='Close list'
+              onClick={() => listDialog.current?.close()}
+            >
+              ×
+            </button>
+          </div>
+          <label>
+            List name
+            <input
+              value={name}
+              maxLength={80}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </label>
+          <p className='drawer-count'>
+            {picks.length} of 100 films. Saved in this browser.
+          </p>
+          {picks.length ? (
+            <ol className='picks'>
+              {picks.map((movie) => (
+                <li key={movie.id}>
+                  <span>
+                    {movie.title}
+                    {movie.release_date && (
+                      <small>{movie.release_date.slice(0, 4)}</small>
+                    )}
+                  </span>
+                  <button
+                    aria-label={`Remove ${movie.title} from list`}
+                    onClick={() => toggle(movie)}
+                  >
+                    ×
+                  </button>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p className='picks-empty'>
+              Open someone’s films and press + on a poster to add it here.
+            </p>
+          )}
+          <div className='drawer-actions'>
+            <button
+              className='create'
+              disabled={!picks.length || !name.trim() || busy}
+              onClick={create}
+            >
+              {busy ? 'Creating list…' : 'Create list in Radarr'}
+            </button>
+            <button className='copy' disabled={!picks.length} onClick={copy}>
+              Copy Radarr list URL
+            </button>
+            <p>
+              Radarr adds these films on its next list sync. It won’t search for
+              them automatically.
+            </p>
+            {notice && (
+              <p role='status' className='notice'>
+                {notice}
+              </p>
+            )}
+            {feed && (
+              <label>
+                List URL
+                <input
+                  readOnly
+                  value={feed}
+                  onFocus={(e) => e.target.select()}
+                />
+              </label>
+            )}
+          </div>
+        </div>
+      </dialog>
+      <footer>
+        <a href='https://www.themoviedb.org/' className='tmdb'>
+          <svg
+            viewBox='0 0 120 18'
+            width='100'
+            role='img'
+            aria-label='The Movie Database'
+          >
+            <text x='0' y='15' fill='#90cea1' fontSize='18' fontWeight='bold'>
+              TMDB
+            </text>
+            <rect x='62' y='2' width='55' height='14' rx='7' fill='#01b4e4' />
+          </svg>
+        </a>
+        <p>
+          This product uses the TMDB API but is not endorsed or certified by
+          TMDB.
+        </p>
+        <a href='https://github.com/kylescudder/listarr'>GitHub</a>
+      </footer>
     </div>
+  )
+}
+const singular: Record<string, string> = {
+  people: 'person',
+  studios: 'studio',
+  collections: 'collection',
+  films: 'film'
+}
+const departments: Record<string, string> = {
+  Acting: 'Actor',
+  Directing: 'Director',
+  Writing: 'Writer',
+  Production: 'Producer',
+  Camera: 'Cinematographer',
+  Editing: 'Editor',
+  Sound: 'Sound',
+  Art: 'Production design',
+  'Costume & Make-Up': 'Costume & make-up',
+  'Visual Effects': 'Visual effects',
+  Crew: 'Crew'
+}
+function initials(text: string) {
+  return text
+    .split(' ')
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join('')
+}
+/** Directory style: family name set large, given names beneath it. */
+function Name({ text, split }: { text: string; split: boolean }) {
+  const parts = text.trim().split(/\s+/)
+  if (!split || parts.length < 2) return <span className='family'>{text}</span>
+  return (
+    <>
+      <span className='given'>{parts.slice(0, -1).join(' ')}</span>{' '}
+      <span className='family'>{parts.at(-1)}</span>
+    </>
   )
 }

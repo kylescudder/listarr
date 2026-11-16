@@ -18,7 +18,7 @@ address="$(docker port "$container" "$port/tcp")"
 health="$(curl --fail --silent --show-error --retry 20 --retry-delay 1 --retry-connrefused --retry-all-errors "http://$address/api/health")"
 jq --exit-status --arg revision "$revision" '.ok == true and .revision == $revision' <<< "$health"
 homepage="$(curl --fail --silent --show-error "http://$address/")"
-[[ "$homepage" == *'Good pictures'* ]]
+[[ "$homepage" == *'<title>Listarr, the film directory</title>'* ]]
 # Execute the image's actual healthcheck at the configured runtime port.
 healthcheck="$(docker inspect --format '{{json .Config.Healthcheck.Test}}' "$container" | jq --exit-status --raw-output 'select(.[0] == "CMD-SHELL") | .[1]')"
 docker exec "$container" sh -c "$healthcheck"

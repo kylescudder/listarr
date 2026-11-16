@@ -2,7 +2,7 @@
 
 # Listarr
 
-Build a hand-picked movie programme from TMDB and create a custom import list in Radarr. A companion to [Sortarr](https://github.com/kylescudder/sortarr), with the same Scudder Picture House design and self-hosted Bun / TanStack Start pattern. No public hostname has been deployed yet.
+A people-first film directory powered by TMDB. Find actors and directors, explore their filmographies, and collect films into a custom Radarr import list. Studios, film titles and collections are also searchable. No public hostname has been deployed yet.
 
 ## Development
 
@@ -53,7 +53,7 @@ No host, DNS, existing Compose stack or real Radarr is changed by installing thi
 
 ## Building a programme
 
-Search films, or search people and collections then choose **Explore films**. People include both cast and crew credits with duplicates removed. Leave the search box empty to discover by genre, release year and sort order. These discovery filters do not apply to text searches. When `RADARR_URL` and `RADARR_API_KEY` are set, films already added to Radarr are hidden from discovery, movie searches, people’s filmographies and collections. This includes monitored, unmonitored and not-yet-downloaded films, matched by TMDB ID. The server checks Radarr on each browse request; no Clerk sign-in, root folder or quality profile is needed for filtering. A failed or incomplete Radarr connection shows a retryable error rather than unfiltered films. Leave both variables blank to browse without Radarr.
+Start with people, or switch to films, studios or collections, then choose **View films**. People include both cast and crew credits with duplicates removed; use Acting or Directing to narrow their filmography. Studio results show the company’s films with pagination. Leave the search box empty to discover by genre, release year and sort order. These discovery filters do not apply to text searches.
 
 Pagination follows TMDB’s original pages, so a page can be shorter or empty after filtering; use Next to continue. Existing saved drafts and exported list snapshots are preserved.
 

@@ -51,10 +51,83 @@ globalThis.fetch = (async (
     }
     if (url.searchParams.get('query') === 'unavailable')
       return Response.json({ error: 'upstream unavailable' }, { status: 503 })
-    if (url.pathname.includes('/search/person'))
+    if (
+      url.pathname.includes('/search/person') ||
+      url.pathname.includes('/person/popular')
+    )
       return Response.json({
-        results: [{ id: 525, name: 'Christopher Nolan' }],
-        total_pages: 1
+        results: [
+          {
+            id: 525,
+            name: 'Christopher Nolan',
+            known_for_department: 'Directing',
+            profile_path: '/xuAIuYSmsUzKlUMBFGVZaWsY3DZ.jpg',
+            known_for: [films[1], films[2]]
+          },
+          {
+            id: 3894,
+            name: 'Christian Bale',
+            known_for_department: 'Acting',
+            known_for: [films[0]]
+          },
+          {
+            id: 1813,
+            name: 'Anne Hathaway',
+            known_for_department: 'Acting',
+            profile_path: '/s6tflSD20MGz04ZR2R1lZvhmC4Y.jpg',
+            known_for: [films[1]]
+          },
+          {
+            id: 83002,
+            name: 'Jessica Chastain',
+            known_for_department: 'Acting',
+            profile_path: '/lodMzLKSdrPcBry6TdoDsMN3Vge.jpg',
+            known_for: [films[1]]
+          },
+          {
+            id: 73968,
+            name: 'Henry Cavill',
+            known_for_department: 'Acting',
+            profile_path: '/dgTD7Q9owL3DyX9uYoSX9KZeUUz.jpg',
+            known_for: [films[0]]
+          },
+          {
+            id: 1136406,
+            name: 'Tom Holland',
+            known_for_department: 'Acting',
+            profile_path: '/tH8bNDcjiS399DlcnC5oubxNh23.jpg',
+            known_for: [films[0]]
+          },
+          {
+            id: 825,
+            name: 'Stacy Keach',
+            known_for_department: 'Acting',
+            profile_path: '/gtYepb7Vu9bXcdZ62PXm56KalNl.jpg',
+            known_for: [films[2]]
+          },
+          {
+            id: 1238316,
+            name: 'Johnny Flynn',
+            known_for_department: 'Acting',
+            profile_path: '/tS3HIDFJbD8uSLAvaxZfrPc3aM0.jpg',
+            known_for: [films[0]]
+          },
+          {
+            id: 15556,
+            name: 'Kathleen Robertson',
+            known_for_department: 'Acting',
+            profile_path: '/nGaey63oyvcZWXFEwaihGP2YryY.jpg',
+            known_for: [films[2]]
+          },
+          {
+            id: 52866,
+            name: 'Agnez Mo',
+            known_for_department: 'Acting',
+            profile_path: '/7GuBJxf5szQRCKLk3iG2ztfCo39.jpg',
+            known_for: [films[0]]
+          }
+        ],
+        total_pages: 2
       })
     if (url.pathname.includes('/search/collection'))
       return Response.json({
@@ -64,14 +137,23 @@ globalThis.fetch = (async (
         ],
         total_pages: 1
       })
+    if (url.pathname.includes('/search/company'))
+      return Response.json({
+        results: [{ id: 41077, name: 'A24' }],
+        total_pages: 1
+      })
     if (url.pathname.includes('/movie_credits'))
       return Response.json({
         cast: [
+          films[0],
           owned,
-          films[1],
           { id: 999, title: 'Adult excluded', adult: true }
         ],
-        crew: [films[2], films[1]]
+        crew: [
+          { ...films[1], job: 'Director' },
+          { ...films[2], job: 'Producer' },
+          { ...films[1], job: 'Director' }
+        ]
       })
     if (url.pathname.includes('/collection/'))
       return Response.json({

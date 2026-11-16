@@ -4,6 +4,11 @@ test('builds a programme, restores the draft and exports a Radarr feed', async (
 }, info) => {
   await page.goto('/')
   await expect(
+    page.getByRole('heading', { name: 'Christopher Nolan', exact: true })
+  ).toBeVisible()
+  await page.getByLabel('Look for').selectOption('movie')
+  await page.getByRole('button', { name: 'Search', exact: true }).click()
+  await expect(
     page.getByRole('heading', { name: 'Dune', exact: true })
   ).toBeVisible()
   await page.getByLabel('Search TMDB').fill('space')
@@ -15,11 +20,14 @@ test('builds a programme, restores the draft and exports a Radarr feed', async (
   await page
     .getByRole('button', { name: 'Add Interstellar', exact: true })
     .click()
-  await page.getByLabel('Programme name').fill('Space season')
+  await expect(page.getByRole('button', { name: 'Your list 2' })).toBeVisible()
+  await page.getByRole('button', { name: /^Your list/ }).click()
+  await page.getByLabel('List name').fill('Space season')
   await page.reload()
-  await expect(page.getByLabel('Programme name')).toHaveValue('Space season')
+  await page.getByRole('button', { name: /^Your list/ }).click()
+  await expect(page.getByLabel('List name')).toHaveValue('Space season')
   await expect(
-    page.getByRole('button', { name: 'Remove Dune from programme' })
+    page.getByRole('button', { name: 'Remove Dune from list' })
   ).toBeVisible()
   await page.getByRole('button', { name: 'Copy Radarr list URL' }).click()
   const url = await page.getByLabel('List URL', { exact: true }).inputValue()
@@ -34,12 +42,10 @@ test('builds a programme, restores the draft and exports a Radarr feed', async (
     path: info.outputPath('programme.png'),
     fullPage: true
   })
-  await page.getByRole('button', { name: 'Remove Dune from programme' }).click()
+  await page.getByRole('button', { name: 'Remove Dune from list' }).click()
   await expect(page.getByLabel('List URL', { exact: true })).toHaveCount(0)
   await page.reload()
-  await expect(
-    page.getByRole('button', { name: 'Remove Dune from programme' })
-  ).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Your list 1' })).toBeVisible()
   const anonymous = await page.request.get(url)
   expect(await anonymous.json()).toEqual([{ id: 157336 }, { id: 438631 }])
 })
@@ -47,6 +53,11 @@ test('explores people and collections, paginates and applies discovery filters',
   page
 }, info) => {
   await page.goto('/')
+  await expect(
+    page.getByRole('heading', { name: 'Christopher Nolan', exact: true })
+  ).toBeVisible()
+  await page.getByLabel('Look for').selectOption('movie')
+  await page.getByRole('button', { name: 'Search', exact: true }).click()
   await expect(
     page.getByRole('heading', { name: 'Dune', exact: true })
   ).toBeVisible()
@@ -71,7 +82,9 @@ test('explores people and collections, paginates and applies discovery filters',
   await expect(
     page.getByRole('heading', { name: 'Christopher Nolan', exact: true })
   ).toBeVisible()
-  await page.getByRole('button', { name: 'Explore films' }).click()
+  await page
+    .getByRole('button', { name: 'Christopher Nolan', exact: true })
+    .click()
   await expect(
     page.getByRole('heading', { name: 'Interstellar', exact: true })
   ).toBeVisible()
@@ -91,9 +104,7 @@ test('explores people and collections, paginates and applies discovery filters',
     page.getByRole('heading', { name: 'Dune Collection', exact: true })
   ).toBeVisible()
   await page
-    .locator('article')
-    .filter({ hasText: 'Dune Collection' })
-    .getByRole('button', { name: 'Explore films' })
+    .getByRole('button', { name: 'Dune Collection', exact: true })
     .click()
   await expect(
     page.getByRole('heading', { name: 'Dune', exact: true })
@@ -112,7 +123,7 @@ test('explores people and collections, paginates and applies discovery filters',
     .click()
   expect((await request).url()).toContain('year=2021')
   await expect(
-    page.getByRole('heading', { name: 'Discover pictures' })
+    page.getByRole('heading', { name: 'Discover films' })
   ).toBeVisible()
   await expect(
     page.getByRole('heading', { name: 'Dune', exact: true })
@@ -136,10 +147,15 @@ test('handles no results, upstream failure and signed-out list creation', async 
   page
 }, info) => {
   await page.goto('/')
+  await expect(
+    page.getByRole('heading', { name: 'Christopher Nolan', exact: true })
+  ).toBeVisible()
+  await page.getByLabel('Look for').selectOption('movie')
+  await page.getByRole('button', { name: 'Search', exact: true }).click()
   await page.getByLabel('Search TMDB').fill('missing')
   await page.getByRole('button', { name: 'Search', exact: true }).click()
   await expect(
-    page.getByRole('heading', { name: 'No pictures found' })
+    page.getByRole('heading', { name: 'No results found' })
   ).toBeVisible()
   await page.getByLabel('Search TMDB').fill('unavailable')
   await page.getByRole('button', { name: 'Search', exact: true }).click()
@@ -151,8 +167,103 @@ test('handles no results, upstream failure and signed-out list creation', async 
   await page.getByLabel('Search TMDB').fill('Dune')
   await page.getByRole('button', { name: 'Search', exact: true }).click()
   await page.getByRole('button', { name: 'Add Dune', exact: true }).click()
+  await page.getByRole('button', { name: /^Your list/ }).click()
   await page
     .getByRole('button', { name: 'Create list in Radarr', exact: true })
     .click()
   await expect(page.getByRole('status')).toContainText('Configure Clerk')
+})
+test('starts with people, filters a filmography by credit and browses studio films', async ({
+  page
+}, info) => {
+  await page.goto('/')
+  await expect(page.getByLabel('Look for')).toHaveValue('person')
+  await expect(
+    page.getByRole('heading', { name: 'Christopher Nolan', exact: true })
+  ).toBeVisible()
+  await page.locator('.headshot img').evaluateAll(async (images) => {
+    await Promise.all(
+      images.map((image) => (image as HTMLImageElement).decode())
+    )
+  })
+  await page.screenshot({
+    path: info.outputPath('people-directory.png'),
+    fullPage: true
+  })
+  await page
+    .getByRole('button', { name: 'Christopher Nolan', exact: true })
+    .click()
+  await expect(
+    page.getByRole('heading', { name: 'Christopher Nolan', exact: true })
+  ).toBeVisible()
+  await page.getByRole('button', { name: 'Directing', exact: true }).click()
+  await expect(
+    page.getByRole('heading', { name: 'Interstellar', exact: true })
+  ).toHaveCount(1)
+  await expect(
+    page.getByRole('heading', { name: 'Oppenheimer', exact: true })
+  ).toHaveCount(0)
+  await page.screenshot({
+    path: info.outputPath('directing-credits.png'),
+    fullPage: true
+  })
+  await page.getByRole('button', { name: 'Acting', exact: true }).click()
+  await expect(
+    page.getByRole('heading', { name: 'Dune', exact: true })
+  ).toBeVisible()
+  await expect(
+    page.getByRole('heading', { name: 'Interstellar', exact: true })
+  ).toHaveCount(0)
+  await page.getByRole('button', { name: 'Add Dune', exact: true }).click()
+  await page.screenshot({
+    path: info.outputPath('acting-credits.png'),
+    fullPage: true
+  })
+  await page.getByRole('button', { name: 'Back to results' }).click()
+  await expect(
+    page.getByRole('heading', { name: 'People to explore', exact: true })
+  ).toBeVisible()
+  await page.getByLabel('Look for').selectOption('company')
+  await page.getByLabel('Search TMDB').fill('A24')
+  await page.getByRole('button', { name: 'Search', exact: true }).click()
+  await expect(
+    page.getByRole('heading', { name: 'A24', exact: true })
+  ).toBeVisible()
+  await page.getByRole('button', { name: 'A24', exact: true }).click()
+  await expect(
+    page.getByRole('heading', { name: 'Dune', exact: true })
+  ).toBeVisible()
+  await page.getByRole('button', { name: 'Next', exact: true }).click()
+  await expect(page.getByText('Page 2 of 2')).toBeVisible()
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth
+    )
+  ).toBe(true)
+  await page.screenshot({
+    path: info.outputPath('studio-films.png'),
+    fullPage: true
+  })
+})
+
+test('returns from a profile to the same page of results', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Next', exact: true }).click()
+  await expect(page.getByText('Page 2 of 2')).toBeVisible()
+  await page
+    .getByRole('button', { name: 'Christopher Nolan', exact: true })
+    .click()
+  await expect(
+    page.getByRole('heading', { name: 'Interstellar', exact: true })
+  ).toBeVisible()
+  // An unsubmitted edit to the search box must not replace the results.
+  await page.getByLabel('Search TMDB').fill('unavailable')
+  const request = page.waitForRequest((r) => r.url().includes('/api/search'))
+  await page.getByRole('button', { name: 'Back to results' }).click()
+  expect((await request).url()).toContain('page=2')
+  await expect(page.getByText('Page 2 of 2')).toBeVisible()
+  await expect(
+    page.getByRole('heading', { name: 'People to explore', exact: true })
+  ).toBeVisible()
+  await expect(page.getByRole('alert')).toHaveCount(0)
 })
