@@ -24,6 +24,7 @@ const films = [
     poster_path: null
   }
 ]
+const owned = { id: 900001, title: 'Already in Radarr', poster_path: null }
 const arrival = { id: 329865, title: 'Arrival', release_date: '2016-11-10' }
 const limits = Array.from({ length: 101 }, (_, i) => ({
   id: i + 1,
@@ -57,16 +58,25 @@ globalThis.fetch = (async (
       })
     if (url.pathname.includes('/search/collection'))
       return Response.json({
-        results: [{ id: 726871, name: 'Dune Collection' }],
+        results: [
+          { id: 726871, name: 'Dune Collection' },
+          { id: 726872, name: 'Owned Collection' }
+        ],
         total_pages: 1
       })
     if (url.pathname.includes('/movie_credits'))
       return Response.json({
-        cast: [films[1], { id: 999, title: 'Adult excluded', adult: true }],
+        cast: [
+          owned,
+          films[1],
+          { id: 999, title: 'Adult excluded', adult: true }
+        ],
         crew: [films[2], films[1]]
       })
     if (url.pathname.includes('/collection/'))
-      return Response.json({ parts: [films[0]] })
+      return Response.json({
+        parts: url.pathname.endsWith('/726872') ? [owned] : [owned, films[0]]
+      })
     const query = url.searchParams.get('query')
     const page = Number(url.searchParams.get('page') || 1)
     if (query === 'rate-limited') return Response.json({}, { status: 429 })
@@ -98,12 +108,27 @@ globalThis.fetch = (async (
     )
       return Response.json({}, { status: 400 })
     return Response.json({
-      results: query === 'missing' ? [] : page === 2 ? [arrival] : films,
+      results:
+        query === 'missing'
+          ? []
+          : page === 2
+            ? [owned, arrival]
+            : [...films, owned],
       total_pages: query === 'missing' ? 1 : 2,
       total_results: 4
     })
   }
   if (url.hostname === 'radarr.fixture') {
+    if (url.pathname === '/api/v3/movie') {
+      if (
+        init?.headers &&
+        new Headers(init.headers).get('X-Api-Key') !== 'fixture-only'
+      )
+        return Response.json({}, { status: 401 })
+      return Response.json([
+        { id: 1, tmdbId: owned.id, hasFile: false, monitored: true }
+      ])
+    }
     if (url.pathname.endsWith('/schema'))
       return Response.json([
         {
