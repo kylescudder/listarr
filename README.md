@@ -30,7 +30,7 @@ bunx --no-install playwright install chromium
 bun run test:e2e
 ```
 
-The end-to-end harness builds the actual production app, creates an ephemeral RSA key for Clerk session verification, and substitutes TMDB and Radarr only at their outbound HTTP boundaries. It exercises desktop and mobile layouts, search, people and collections, filters, paging, draft persistence, feed export, authorised creation, duplicate creation, denied access and upstream failures. It needs no service keys and never writes to a real Radarr. Real Clerk sign-in and live upstream integrations require separate deployment checks.
+The end-to-end harness builds the actual production app, creates an ephemeral RSA key for Clerk session verification, and substitutes TMDB and Radarr only at their outbound HTTP boundaries. It exercises desktop and mobile layouts, search, people and collections, filters, paging, draft persistence, feed export, authorised creation, duplicate creation, denied access and upstream failures. It needs no service keys and never writes to a real Radarr. See [the coverage matrix and evidence guide](e2e/README.md) for exact journeys, retained artifacts and remaining gaps. Real Clerk sign-in and live upstream integrations require separate deployment checks.
 
 ## Database
 
