@@ -2,7 +2,7 @@
 
 # Listarr
 
-Build a hand-picked movie programme from TMDB and create a custom import list in Radarr. A companion to [Sortarr](https://github.com/kylescudder/sortarr), with the same Scudder Picture House design and self-hosted Bun / TanStack Start pattern. No public hostname has been deployed yet.
+A people-first film directory powered by TMDB. Find actors and directors, explore their filmographies, and collect films into a custom Radarr import list. Studios, film titles and collections are also searchable. No public hostname has been deployed yet.
 
 ## Development
 
@@ -53,7 +53,7 @@ No host, DNS, existing Compose stack or real Radarr is changed by installing thi
 
 ## Building a programme
 
-Search films, or search people and collections then choose **Explore films**. People include both cast and crew credits with duplicates removed. Leave the search box empty to discover by genre, release year and sort order. These discovery filters do not apply to text searches. Pick up to 100 films across result pages and give the programme a name.
+Start with people, or switch to films, studios or collections, then choose **View films**. People include both cast and crew credits with duplicates removed; use Acting or Directing to narrow their filmography. Studio results show the company’s films with pagination. Leave the search box empty to discover by genre, release year and sort order. These discovery filters do not apply to text searches. Pick up to 100 films across result pages and give the programme a name.
 
 - **Copy Radarr list URL** exports a snapshot. In Radarr, choose Settings → Import Lists → Custom Lists and paste the URL.
 - **Create list in Radarr** registers that same snapshot using the configured root folder and quality profile. Films are enabled for automatic addition on Radarr's next sync, monitored as movies only, with **Search on Add off**. This does not trigger an immediate sync, search or download. Existing Radarr monitoring and RSS behaviour still applies.

@@ -12,7 +12,7 @@ class ApiError extends Error {
 }
 const searchSchema = z.object({
   q: z.string().trim().max(150).default(''),
-  kind: z.enum(['movie', 'person', 'collection']).default('movie'),
+  kind: z.enum(['movie', 'person', 'collection', 'company']).default('movie'),
   page: z.coerce.number().int().min(1).max(500).default(1),
   genre: z.string().regex(/^\d*$/).default(''),
   year: z
@@ -170,37 +170,69 @@ export async function handleApi(request: Request): Promise<Response> {
       const { q, kind, page, genre, year, sort } = searchSchema.parse(
         Object.fromEntries(url.searchParams)
       )
-      if (kind !== 'movie' && !q)
+      if (kind !== 'movie' && kind !== 'person' && !q)
         return Response.json({ results: [], total_pages: 0, total_results: 0 })
-      const result = await tmdb(q ? `search/${kind}` : 'discover/movie', {
-        query: q,
-        page: String(page),
-        include_adult: 'false',
-        language: 'en-GB',
-        ...(!q
-          ? {
-              with_genres: genre,
-              primary_release_year: year,
-              sort_by: sort,
-              'vote_count.gte': '100'
-            }
-          : {})
-      })
+      const result = await tmdb(
+        q
+          ? `search/${kind}`
+          : kind === 'person'
+            ? 'person/popular'
+            : 'discover/movie',
+        {
+          query: q,
+          page: String(page),
+          include_adult: 'false',
+          language: 'en-GB',
+          ...(!q
+            ? {
+                with_genres: genre,
+                primary_release_year: year,
+                sort_by: sort,
+                'vote_count.gte': '100'
+              }
+            : {})
+        }
+      )
       return Response.json(result, {
         headers: { 'Cache-Control': 'public, max-age=60' }
       })
     }
-    const expansion = url.pathname.match(/^\/api\/(person|collection)\/(\d+)$/)
+    const expansion = url.pathname.match(
+      /^\/api\/(person|collection|company)\/(\d+)$/
+    )
     if (expansion && request.method === 'GET') {
+      const page = searchSchema.shape.page.parse(
+        url.searchParams.get('page') || 1
+      )
+      const role = z
+        .enum(['all', 'acting', 'directing'])
+        .parse(url.searchParams.get('role') || 'all')
       const result = await tmdb(
-        expansion[1] === 'person'
-          ? `person/${expansion[2]}/movie_credits`
-          : `collection/${expansion[2]}`
+        expansion[1] === 'company'
+          ? 'discover/movie'
+          : expansion[1] === 'person'
+            ? `person/${expansion[2]}/movie_credits`
+            : `collection/${expansion[2]}`,
+        expansion[1] === 'company'
+          ? {
+              with_companies: expansion[2],
+              page: String(page),
+              include_adult: 'false'
+            }
+          : {}
       )
       const movies =
         expansion[1] === 'person'
-          ? [...result.cast, ...result.crew]
-          : result.parts
+          ? role === 'acting'
+            ? result.cast
+            : role === 'directing'
+              ? result.crew.filter(
+                  (credit: { job?: string }) => credit.job === 'Director'
+                )
+              : [...result.cast, ...result.crew]
+          : expansion[1] === 'company'
+            ? result.results
+            : result.parts
       return Response.json({
         results: [
           ...new Map(
@@ -209,7 +241,7 @@ export async function handleApi(request: Request): Promise<Response> {
               .map((m: { id: number }) => [m.id, m])
           ).values()
         ],
-        total_pages: 1
+        total_pages: expansion[1] === 'company' ? result.total_pages : 1
       })
     }
     if (url.pathname === '/api/lists' && request.method === 'POST')

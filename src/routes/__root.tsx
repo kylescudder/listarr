@@ -11,8 +11,8 @@ export const Route = createRootRoute({
     meta: [
       { charSet: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { title: 'Listarr · Build your next picture programme' },
-      { name: 'theme-color', content: '#092826' }
+      { title: 'Listarr · The film people directory' },
+      { name: 'theme-color', content: '#f4cf47' }
     ],
     links: [
       { rel: 'stylesheet', href: styles },

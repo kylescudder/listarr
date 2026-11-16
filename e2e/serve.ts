@@ -39,9 +39,26 @@ globalThis.fetch = (async (
   if (url.hostname === 'api.themoviedb.org') {
     if (url.searchParams.get('query') === 'unavailable')
       return Response.json({ error: 'upstream unavailable' }, { status: 503 })
-    if (url.pathname.includes('/search/person'))
+    if (
+      url.pathname.includes('/search/person') ||
+      url.pathname.includes('/person/popular')
+    )
       return Response.json({
-        results: [{ id: 525, name: 'Christopher Nolan' }],
+        results: [
+          {
+            id: 525,
+            name: 'Christopher Nolan',
+            known_for_department: 'Directing',
+            profile_path: '/xuAIuYSmsUzKlUMBFGVZaWsY3DZ.jpg',
+            known_for: [films[1], films[2]]
+          },
+          {
+            id: 3894,
+            name: 'Christian Bale',
+            known_for_department: 'Acting',
+            known_for: [films[0]]
+          }
+        ],
         total_pages: 1
       })
     if (url.pathname.includes('/search/collection'))
@@ -49,8 +66,20 @@ globalThis.fetch = (async (
         results: [{ id: 726871, name: 'Dune Collection' }],
         total_pages: 1
       })
+    if (url.pathname.includes('/search/company'))
+      return Response.json({
+        results: [{ id: 41077, name: 'A24' }],
+        total_pages: 1
+      })
     if (url.pathname.includes('/movie_credits'))
-      return Response.json({ cast: [], crew: [films[1], films[2], films[1]] })
+      return Response.json({
+        cast: [films[0]],
+        crew: [
+          { ...films[1], job: 'Director' },
+          { ...films[2], job: 'Producer' },
+          { ...films[1], job: 'Director' }
+        ]
+      })
     if (url.pathname.includes('/collection/'))
       return Response.json({ parts: [films[0]] })
     return Response.json({

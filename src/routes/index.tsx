@@ -32,7 +32,13 @@ function MemberApp() {
     />
   )
 }
-type Result = Movie & { name?: string; profile_path?: string | null }
+type Result = Movie & {
+  name?: string
+  profile_path?: string | null
+  logo_path?: string | null
+  known_for_department?: string
+  known_for?: Movie[]
+}
 async function json(url: string, init?: RequestInit) {
   const res = await fetch(url, init)
   const data = await res.json()
@@ -48,7 +54,7 @@ function Programme({
   account?: React.ReactNode
 }) {
   const [query, setQuery] = useState('')
-  const [kind, setKind] = useState('movie')
+  const [kind, setKind] = useState('person')
   const [genre, setGenre] = useState('')
   const [year, setYear] = useState('')
   const [sort, setSort] = useState('popularity.desc')
@@ -56,13 +62,15 @@ function Programme({
   const [page, setPage] = useState(1)
   const [pages, setPages] = useState(1)
   const [endpoint, setEndpoint] = useState('/api/search')
-  const [params, setParams] = useState('')
+  const [params, setParams] = useState('kind=person')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [heading, setHeading] = useState('Popular pictures')
-  const [resultKind, setResultKind] = useState('movie')
+  const [heading, setHeading] = useState('People to explore')
+  const [resultKind, setResultKind] = useState('person')
+  const [creditRole, setCreditRole] = useState('all')
+  const [profile, setProfile] = useState<Result | null>(null)
   const [picks, setPicks] = useState<Movie[]>([])
-  const [name, setName] = useState('My picture programme')
+  const [name, setName] = useState('My film list')
   const [ready, setReady] = useState(false)
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState('')
@@ -117,11 +125,13 @@ function Programme({
       })
     return () => controller.abort()
   }, [endpoint, params, page])
-  function search(event: FormEvent) {
-    event.preventDefault()
+  function search(event?: FormEvent) {
+    event?.preventDefault()
     setLoading(true)
     setResults([])
     setEndpoint('/api/search')
+    setProfile(null)
+    setCreditRole('all')
     setParams(
       new URLSearchParams({
         q: query,
@@ -134,13 +144,23 @@ function Programme({
     )
     setPage(1)
     setResultKind(kind)
-    setHeading(query ? `Results for “${query}”` : 'Discover pictures')
+    setHeading(
+      query
+        ? `Results for “${query}”`
+        : kind === 'person'
+          ? 'People to explore'
+          : kind === 'company'
+            ? 'Find a studio by name'
+            : 'Discover films'
+    )
   }
   function expand(item: Result) {
     setLoading(true)
     setResults([])
     setEndpoint(`/api/${resultKind}/${item.id}`)
     setParams('')
+    setProfile(item)
+    setCreditRole('all')
     setPage(1)
     setResultKind('movie')
     setHeading(item.name || item.title)
@@ -152,7 +172,7 @@ function Programme({
     else if (picks.length < 100) setPicks([...picks, movie])
     else
       setNotice(
-        'A programme can contain up to 100 films. Remove one to add another.'
+        'A list can contain up to 100 films. Remove one to add another.'
       )
   }
   async function copy() {
@@ -194,7 +214,7 @@ function Programme({
       setFeed(data.url)
       setNotice(
         data.existing
-          ? 'This programme is already in Radarr.'
+          ? 'This list is already in Radarr.'
           : 'List created in Radarr. Films will be added on its next list sync; automatic search is off.'
       )
     } catch (err) {
@@ -212,37 +232,48 @@ function Programme({
           <img src='/icon.svg' alt='' />
           Listarr
         </a>
-        <span className='house'>Scudder Picture House</span>
+        <span className='house'>A directory for your next film</span>
+        <a className='list-jump' href='#ticket-heading'>
+          Your list ({picks.length})
+        </a>
         <div className='account'>
           {account}
           <a href='https://github.com/kylescudder/listarr'>GitHub</a>
         </div>
       </header>
       <main>
-        <section className='marquee'>
-          <div className='bulbs' />
-          <div className='letterboard'>
-            <p>A double bill? A whole season? Your call.</p>
+        <section className='directory-intro'>
+          <div className='directory-mark' aria-hidden='true'>
+            a–z
+          </div>
+          <div>
+            <p className='directory-label'>The film people directory</p>
             <h1>
-              Good pictures.
+              Start with a name.
               <br />
-              Your programme.
+              Find your next film.
             </h1>
             <p>
-              Find films on TMDB. Put them on the bill. Make a list for Radarr.
+              Follow the people behind the films you love. Explore their work,
+              pick your favourites and make a list for Radarr.
             </p>
           </div>
-          <div className='bulbs' />
         </section>
         <div className='workspace'>
-          <section className='browse' aria-label='Find films'>
+          <section className='browse' aria-label='Search the directory'>
             <form onSubmit={search} className='search-form'>
               <label className='search-input'>
                 Search TMDB
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder='A film, a favourite actor, a collection…'
+                  placeholder={
+                    kind === 'person'
+                      ? 'An actor or director, e.g. Christopher Nolan'
+                      : kind === 'company'
+                        ? 'A studio, e.g. A24'
+                        : 'A film or collection name'
+                  }
                   maxLength={150}
                 />
               </label>
@@ -253,86 +284,144 @@ function Programme({
                   value={kind}
                   onChange={(e) => setKind(e.target.value)}
                 >
-                  <option value='movie'>Films</option>
                   <option value='person'>People</option>
+                  <option value='movie'>Films</option>
+                  <option value='company'>Studios</option>
                   <option value='collection'>Collections</option>
                 </select>
               </label>
               <button className='gold' type='submit'>
                 Search
               </button>
-              <details className='filters'>
-                <summary>Discover by genre, year & rating</summary>
-                <p>Leave the search box empty to explore with these filters.</p>
-                <div className='filter-fields'>
-                  <label>
-                    Genre
-                    <select
-                      aria-label='Genre'
-                      value={genre}
-                      onChange={(e) => setGenre(e.target.value)}
-                    >
-                      <option value=''>All genres</option>
-                      {[
-                        [28, 'Action'],
-                        [12, 'Adventure'],
-                        [16, 'Animation'],
-                        [35, 'Comedy'],
-                        [80, 'Crime'],
-                        [99, 'Documentary'],
-                        [18, 'Drama'],
-                        [14, 'Fantasy'],
-                        [27, 'Horror'],
-                        [10749, 'Romance'],
-                        [878, 'Science fiction'],
-                        [53, 'Thriller']
-                      ].map(([id, label]) => (
-                        <option key={id} value={id}>
-                          {label}
+              {kind === 'movie' && (
+                <details className='filters'>
+                  <summary>Discover by genre, year & rating</summary>
+                  <p>
+                    Leave the search box empty to explore with these filters.
+                  </p>
+                  <div className='filter-fields'>
+                    <label>
+                      Genre
+                      <select
+                        aria-label='Genre'
+                        value={genre}
+                        onChange={(e) => setGenre(e.target.value)}
+                      >
+                        <option value=''>All genres</option>
+                        {[
+                          [28, 'Action'],
+                          [12, 'Adventure'],
+                          [16, 'Animation'],
+                          [35, 'Comedy'],
+                          [80, 'Crime'],
+                          [99, 'Documentary'],
+                          [18, 'Drama'],
+                          [14, 'Fantasy'],
+                          [27, 'Horror'],
+                          [10749, 'Romance'],
+                          [878, 'Science fiction'],
+                          [53, 'Thriller']
+                        ].map(([id, label]) => (
+                          <option key={id} value={id}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      Release year
+                      <input
+                        inputMode='numeric'
+                        pattern='[0-9]{4}'
+                        placeholder='Any year'
+                        value={year}
+                        maxLength={4}
+                        onChange={(e) => setYear(e.target.value)}
+                      />
+                    </label>
+                    <label>
+                      Sort by
+                      <select
+                        aria-label='Sort by'
+                        value={sort}
+                        onChange={(e) => setSort(e.target.value)}
+                      >
+                        <option value='popularity.desc'>Popular first</option>
+                        <option value='vote_average.desc'>Highest rated</option>
+                        <option value='primary_release_date.desc'>
+                          Newest first
                         </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    Release year
-                    <input
-                      inputMode='numeric'
-                      pattern='[0-9]{4}'
-                      placeholder='Any year'
-                      value={year}
-                      maxLength={4}
-                      onChange={(e) => setYear(e.target.value)}
-                    />
-                  </label>
-                  <label>
-                    Sort by
-                    <select
-                      aria-label='Sort by'
-                      value={sort}
-                      onChange={(e) => setSort(e.target.value)}
-                    >
-                      <option value='popularity.desc'>Popular first</option>
-                      <option value='vote_average.desc'>Highest rated</option>
-                      <option value='primary_release_date.desc'>
-                        Newest first
-                      </option>
-                    </select>
-                  </label>
-                </div>
-                <button type='submit' className='quiet'>
-                  Discover films
-                </button>
-              </details>
+                      </select>
+                    </label>
+                  </div>
+                  <button type='submit' className='quiet'>
+                    Discover films
+                  </button>
+                </details>
+              )}
             </form>
+            {profile && (
+              <button className='back-to-directory' onClick={() => search()}>
+                Back to results
+              </button>
+            )}
+            {profile && (
+              <div className='profile-heading'>
+                <span className='profile-avatar' aria-hidden='true'>
+                  {profile.profile_path ? (
+                    <img
+                      src={`https://image.tmdb.org/t/p/w185${profile.profile_path}`}
+                      alt=''
+                    />
+                  ) : (
+                    (profile.name || profile.title).slice(0, 1)
+                  )}
+                </span>
+                <div>
+                  <p>
+                    {profile.known_for_department ||
+                      (endpoint.includes('/company/')
+                        ? 'Studio'
+                        : 'Filmography')}
+                  </p>
+                  <h2>{profile.name || profile.title}</h2>
+                  <p>Choose films to add to your list.</p>
+                </div>
+              </div>
+            )}
+            {profile && endpoint.includes('/person/') && (
+              <div
+                className='credit-tabs'
+                role='group'
+                aria-label='Filmography credits'
+              >
+                {[
+                  ['all', 'All films'],
+                  ['acting', 'Acting'],
+                  ['directing', 'Directing']
+                ].map(([value, label]) => (
+                  <button
+                    key={value}
+                    aria-pressed={creditRole === value}
+                    onClick={() => {
+                      setCreditRole(value)
+                      setParams(`role=${value}`)
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
             <div className='results-heading'>
-              <h2>{heading}</h2>
+              <h2>{profile ? 'Filmography' : heading}</h2>
               <span>
                 {loading ? 'Loading…' : `${results.length} on this page`}
               </span>
             </div>
             {error ? (
               <div role='alert' className='error'>
-                <h3>Projection paused</h3>
+                <h3>Could not load the directory</h3>
                 <p>{error}</p>
                 <button
                   onClick={() => setParams(`${params}&retry=${Date.now()}`)}
@@ -342,22 +431,25 @@ function Programme({
               </div>
             ) : loading ? (
               <div className='empty' role='status'>
-                Finding your next picture…
+                Searching the directory…
               </div>
             ) : results.length === 0 ? (
               <div className='empty'>
-                <h3>No pictures found</h3>
+                <h3>No results found</h3>
                 <p>
-                  Try another title, person or collection, or broaden your
-                  filters.
+                  Try another name or spelling, or choose a different search
+                  type.
                 </p>
               </div>
             ) : (
-              <div className='films'>
+              <div
+                className={`films ${resultKind === 'person' || resultKind === 'company' ? 'directory' : ''}`}
+              >
                 {results.map((item) => {
                   const picked = picks.some((p) => p.id === item.id)
                   const title = item.title || item.name || 'Untitled'
-                  const image = item.poster_path || item.profile_path
+                  const image =
+                    item.profile_path || item.poster_path || item.logo_path
                   return (
                     <article
                       className={`film ${picked ? 'picked' : ''}`}
@@ -372,9 +464,11 @@ function Programme({
                           />
                         ) : (
                           <span className='poster-placeholder'>
-                            Picture
-                            <br />
-                            House
+                            {title
+                              .split(' ')
+                              .map((part) => part[0])
+                              .slice(0, 2)
+                              .join('')}
                           </span>
                         )}
                         {resultKind === 'movie' && (
@@ -392,20 +486,31 @@ function Programme({
                         <p className='film-meta'>
                           {item.release_date?.slice(0, 4) ||
                             (resultKind === 'person'
-                              ? 'Filmography'
+                              ? item.known_for_department || 'Person'
                               : resultKind === 'collection'
                                 ? 'Collection'
-                                : 'Year unknown')}
+                                : resultKind === 'company'
+                                  ? 'Studio'
+                                  : 'Year unknown')}
                           {!!item.vote_average &&
                             ` / ★ ${item.vote_average.toFixed(1)}`}
                         </p>
                         <h3>{title}</h3>
+                        {resultKind === 'person' && item.known_for?.length ? (
+                          <p className='known-for'>
+                            Known for{' '}
+                            {item.known_for
+                              .map((film) => film.title)
+                              .filter(Boolean)
+                              .join(', ')}
+                          </p>
+                        ) : null}
                         {resultKind !== 'movie' && (
                           <button
                             className='quiet'
                             onClick={() => expand(item)}
                           >
-                            Explore films
+                            View films
                           </button>
                         )}
                       </div>
@@ -432,16 +537,11 @@ function Programme({
             )}
           </section>
           <aside className='ticket' aria-labelledby='ticket-heading'>
-            <div className='ticket-top'>
-              <span>Scudder Picture House</span>
-              <span>Admit all</span>
-            </div>
-            <h2 id='ticket-heading'>Your programme</h2>
-            <p className='ticket-intro'>
-              A hand-picked bill, ready for Radarr.
-            </p>
+            <div className='list-label'>Your shortlist</div>
+            <h2 id='ticket-heading'>A few good films.</h2>
+            <p className='ticket-intro'>Collect the films you want to watch.</p>
             <label>
-              Programme name
+              List name
               <input
                 value={name}
                 maxLength={80}
@@ -450,11 +550,7 @@ function Programme({
             </label>
             <div className='ticket-count'>
               <strong>{String(picks.length).padStart(2, '0')}</strong>
-              <span>
-                of 100 films
-                <br />
-                on the bill
-              </span>
+              <span>of 100 films selected</span>
             </div>
             {picks.length ? (
               <ol className='picks'>
@@ -472,9 +568,9 @@ function Programme({
               </ol>
             ) : (
               <div className='ticket-empty'>
-                The bill is yours to fill.
+                Your next watch starts with a name.
                 <br />
-                Pick a film with the + button.
+                Open a filmography and pick films with +.
               </div>
             )}
             <div className='ticket-stub'>
@@ -528,9 +624,7 @@ function Programme({
             This product uses the TMDB API but is not endorsed or certified by
             TMDB.
           </p>
-          <a href='https://github.com/kylescudder/sortarr'>
-            Also at the Picture House: Sortarr
-          </a>
+          <a href='https://github.com/kylescudder/sortarr'>Sortarr</a>
         </footer>
       </main>
     </div>
