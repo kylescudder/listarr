@@ -88,6 +88,28 @@ async function radarr(path: string, init: RequestInit = {}) {
     )
   return response.json()
 }
+// Read on every browse request so newly added films disappear on the next search.
+// Never expose the library or its credentials through a separate public endpoint.
+async function excludeRadarrMovies<T extends { id: number }>(movies: T[]) {
+  if (!process.env.RADARR_URL && !process.env.RADARR_API_KEY)
+    return { results: movies, radarrFiltered: false }
+  let library: { tmdbId: number }[]
+  try {
+    library = z
+      .array(z.object({ tmdbId: z.number().int().nonnegative() }))
+      .parse(await radarr('movie'))
+  } catch {
+    throw new ApiError(
+      'Could not check films already in Radarr. Check RADARR_URL and RADARR_API_KEY, then try again.',
+      502
+    )
+  }
+  const existing = new Set(library.map((movie) => movie.tmdbId))
+  return {
+    results: movies.filter((movie) => !existing.has(movie.id)),
+    radarrFiltered: true
+  }
+}
 let creation: Promise<unknown> = Promise.resolve()
 async function createList(request: Request) {
   await requireOperator(request)
@@ -193,9 +215,12 @@ export async function handleApi(request: Request): Promise<Response> {
             : {})
         }
       )
-      return Response.json(result, {
-        headers: { 'Cache-Control': 'public, max-age=60' }
-      })
+      return Response.json(
+        kind === 'movie'
+          ? { ...result, ...(await excludeRadarrMovies(result.results)) }
+          : result,
+        { headers: { 'Cache-Control': 'no-store' } }
+      )
     }
     const expansion = url.pathname.match(
       /^\/api\/(person|collection|company)\/(\d+)$/
@@ -221,7 +246,7 @@ export async function handleApi(request: Request): Promise<Response> {
             }
           : {}
       )
-      const movies =
+      const movies: { id: number; adult?: boolean }[] =
         expansion[1] === 'person'
           ? role === 'acting'
             ? result.cast
@@ -233,16 +258,20 @@ export async function handleApi(request: Request): Promise<Response> {
           : expansion[1] === 'company'
             ? result.results
             : result.parts
-      return Response.json({
-        results: [
-          ...new Map(
-            movies
-              .filter((m: { adult?: boolean }) => !m.adult)
-              .map((m: { id: number }) => [m.id, m])
-          ).values()
-        ],
-        total_pages: expansion[1] === 'company' ? result.total_pages : 1
-      })
+      const uniqueMovies = [
+        ...new Map(
+          movies
+            .filter((m: { adult?: boolean }) => !m.adult)
+            .map((m: { id: number }) => [m.id, m])
+        ).values()
+      ]
+      return Response.json(
+        {
+          ...(await excludeRadarrMovies(uniqueMovies)),
+          total_pages: expansion[1] === 'company' ? result.total_pages : 1
+        },
+        { headers: { 'Cache-Control': 'no-store' } }
+      )
     }
     if (url.pathname === '/api/lists' && request.method === 'POST')
       return Response.json(await createList(request))

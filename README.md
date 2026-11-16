@@ -30,7 +30,7 @@ bunx --no-install playwright install chromium
 bun run test:e2e
 ```
 
-The end-to-end harness builds the actual production app, creates an ephemeral RSA key for Clerk session verification, and substitutes TMDB and Radarr only at their outbound HTTP boundaries. It exercises desktop and mobile layouts, search, people and collections, filters, paging, draft persistence, feed export, authorised creation, duplicate creation, denied access and upstream failures. It needs no service keys and never writes to a real Radarr. Real Clerk sign-in and live upstream integrations require separate deployment checks.
+The end-to-end harness builds the actual production app, creates an ephemeral RSA key for Clerk session verification, and substitutes TMDB and Radarr only at their outbound HTTP boundaries. It exercises desktop and mobile layouts, search, people and collections, filters, paging, draft persistence, feed export, authorised creation, duplicate creation, denied access and upstream failures. It needs no service keys and never writes to a real Radarr. See [the coverage matrix and evidence guide](e2e/README.md) for exact journeys, retained artifacts and remaining gaps. Real Clerk sign-in and live upstream integrations require separate deployment checks.
 
 ## Database
 
@@ -53,7 +53,11 @@ No host, DNS, existing Compose stack or real Radarr is changed by installing thi
 
 ## Building a programme
 
-Start with people, or switch to films, studios or collections, then choose **View films**. People include both cast and crew credits with duplicates removed; use Acting or Directing to narrow their filmography. Studio results show the company’s films with pagination. Leave the search box empty to discover by genre, release year and sort order. These discovery filters do not apply to text searches. Pick up to 100 films across result pages and give the programme a name.
+Start with people, or switch to films, studios or collections, then choose **View films**. People include both cast and crew credits with duplicates removed; use Acting or Directing to narrow their filmography. Studio results show the company’s films with pagination. Leave the search box empty to discover by genre, release year and sort order. These discovery filters do not apply to text searches.
+
+Pagination follows TMDB’s original pages, so a page can be shorter or empty after filtering; use Next to continue. Existing saved drafts and exported list snapshots are preserved.
+
+Pick up to 100 films across result pages and give the programme a name.
 
 - **Copy Radarr list URL** exports a snapshot. In Radarr, choose Settings → Import Lists → Custom Lists and paste the URL.
 - **Create list in Radarr** registers that same snapshot using the configured root folder and quality profile. Films are enabled for automatic addition on Radarr's next sync, monitored as movies only, with **Search on Add off**. This does not trigger an immediate sync, search or download. Existing Radarr monitoring and RSS behaviour still applies.
@@ -65,21 +69,21 @@ Clerk follows this repository's supplied development preferences. Only direct Ra
 
 ## Runtime configuration
 
-| Variable                     | Required            | Purpose                                                                   |
-| ---------------------------- | ------------------- | ------------------------------------------------------------------------- |
-| `TMDB_READ_TOKEN`            | for search          | TMDB API Read Access Token                                                |
-| `APP_ORIGIN`                 | for direct creation | Exact browser origin; local default in example is `http://127.0.0.1:3211` |
-| `FEED_ORIGIN`                | no                  | Origin Radarr can reach; defaults to `APP_ORIGIN`                         |
-| `VITE_CLERK_PUBLISHABLE_KEY` | for direct creation | Public Clerk key, baked into the client at build time                     |
-| `CLERK_SECRET_KEY`           | for direct creation | Clerk server key, unless using `CLERK_JWT_KEY`                            |
-| `CLERK_JWT_KEY`              | no                  | Trusted PEM public key for offline Clerk verification                     |
-| `RADARR_ALLOWED_USER_IDS`    | for direct creation | Comma-separated Clerk user IDs; checked every request                     |
-| `RADARR_URL`                 | for direct creation | Server-side Radarr base URL, including any URL base                       |
-| `RADARR_API_KEY`             | for direct creation | Radarr API key; never sent to the browser                                 |
-| `RADARR_QUALITY_PROFILE_ID`  | for direct creation | Existing Radarr quality profile ID                                        |
-| `RADARR_ROOT_FOLDER`         | for direct creation | Existing Radarr root folder path                                          |
-| `HOST`                       | no                  | Bind address, `127.0.0.1` locally / `0.0.0.0` in Docker                   |
-| `PORT`                       | no                  | Defaults to `3211`                                                        |
-| `LISTARR_REVISION`           | no                  | Source revision reported by the health endpoint                           |
+| Variable                     | Required                 | Purpose                                                                   |
+| ---------------------------- | ------------------------ | ------------------------------------------------------------------------- |
+| `TMDB_READ_TOKEN`            | for search               | TMDB API Read Access Token                                                |
+| `APP_ORIGIN`                 | for direct creation      | Exact browser origin; local default in example is `http://127.0.0.1:3211` |
+| `FEED_ORIGIN`                | no                       | Origin Radarr can reach; defaults to `APP_ORIGIN`                         |
+| `VITE_CLERK_PUBLISHABLE_KEY` | for direct creation      | Public Clerk key, baked into the client at build time                     |
+| `CLERK_SECRET_KEY`           | for direct creation      | Clerk server key, unless using `CLERK_JWT_KEY`                            |
+| `CLERK_JWT_KEY`              | no                       | Trusted PEM public key for offline Clerk verification                     |
+| `RADARR_ALLOWED_USER_IDS`    | for direct creation      | Comma-separated Clerk user IDs; checked every request                     |
+| `RADARR_URL`                 | for filtering / creation | Radarr base URL for filtering and creation, including any URL base        |
+| `RADARR_API_KEY`             | for filtering / creation | Radarr API key for filtering and creation; server-only                    |
+| `RADARR_QUALITY_PROFILE_ID`  | for direct creation      | Existing Radarr quality profile ID                                        |
+| `RADARR_ROOT_FOLDER`         | for direct creation      | Existing Radarr root folder path                                          |
+| `HOST`                       | no                       | Bind address, `127.0.0.1` locally / `0.0.0.0` in Docker                   |
+| `PORT`                       | no                       | Defaults to `3211`                                                        |
+| `LISTARR_REVISION`           | no                       | Source revision reported by the health endpoint                           |
 
 This product uses the [TMDB API](https://developer.themoviedb.org/) but is not endorsed or certified by TMDB. Custom feed format follows [Radarr's parser](https://github.com/Radarr/Radarr/blob/develop/src/NzbDrone.Core/ImportLists/RadarrList/RadarrListParser.cs). Never commit `.env`.

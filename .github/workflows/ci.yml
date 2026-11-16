@@ -31,9 +31,13 @@ jobs:
       - name: Build
         run: bun run build
       - name: Test the programme in a browser against fake TMDB and Radarr
+        env:
+          E2E_EVIDENCE: '1'
         run: |
+          set -o pipefail
+          mkdir -p artifacts/full-e2e
           bunx --no-install playwright install --with-deps chromium
-          bun run test:e2e
+          bun run test:e2e 2>&1 | tee artifacts/full-e2e/run.log
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
@@ -41,6 +45,7 @@ jobs:
           path: |
             playwright-report/
             test-results/
+            artifacts/full-e2e/
           retention-days: 7
       - name: Build the production image without publishing
         run: docker build --build-arg LISTARR_REVISION="$GITHUB_SHA" -t listarr:ci .

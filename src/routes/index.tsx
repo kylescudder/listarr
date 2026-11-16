@@ -60,6 +60,7 @@ function Programme({
   const [year, setYear] = useState('')
   const [sort, setSort] = useState('popularity.desc')
   const [results, setResults] = useState<Result[]>([])
+  const [radarrFiltered, setRadarrFiltered] = useState(false)
   const [page, setPage] = useState(1)
   const [pages, setPages] = useState(1)
   const [endpoint, setEndpoint] = useState('/api/search')
@@ -75,6 +76,7 @@ function Programme({
   const [ready, setReady] = useState(false)
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState('')
+  const [full, setFull] = useState(false)
   const [feed, setFeed] = useState('')
   useEffect(() => {
     try {
@@ -113,6 +115,7 @@ function Programme({
     json(`${endpoint}?${params}&page=${page}`, { signal: controller.signal })
       .then((data) => {
         setResults(data.results)
+        setRadarrFiltered(Boolean(data.radarrFiltered))
         setPages(Math.min(data.total_pages || 1, 500))
       })
       .catch((err) => {
@@ -168,13 +171,11 @@ function Programme({
   }
   function toggle(movie: Movie) {
     setNotice('')
+    setFull(false)
     if (picks.some((p) => p.id === movie.id))
       setPicks(picks.filter((p) => p.id !== movie.id))
     else if (picks.length < 100) setPicks([...picks, movie])
-    else
-      setNotice(
-        'A list can contain up to 100 films. Remove one to add another.'
-      )
+    else setFull(true)
   }
   async function copy() {
     const url = listUrl(
@@ -425,6 +426,14 @@ function Programme({
                 : ''}
           </span>
         </div>
+        {full && (
+          <p role='status' className='limit-note'>
+            Your list is full at 100 films. Remove one to add another.
+          </p>
+        )}
+        {!loading && !error && radarrFiltered && (
+          <p className='radarr-note'>Films already in Radarr are hidden.</p>
+        )}
         {error ? (
           <div role='alert' className='message'>
             <h3>Could not load the directory</h3>
@@ -439,11 +448,24 @@ function Programme({
           </div>
         ) : results.length === 0 ? (
           <div className='message'>
-            <h3>No results found</h3>
-            <p>
-              Check the spelling, or search for{' '}
-              {kind === 'person' ? 'a film or studio' : 'a person'} instead.
-            </p>
+            {profile ? (
+              <>
+                <h3>No films to add</h3>
+                <p>
+                  {radarrFiltered
+                    ? 'Every film here is already in Radarr, or none match this filter.'
+                    : 'No films match this filter.'}
+                </p>
+              </>
+            ) : (
+              <>
+                <h3>No results found</h3>
+                <p>
+                  Check the spelling, or search for{' '}
+                  {kind === 'person' ? 'a film or studio' : 'a person'} instead.
+                </p>
+              </>
+            )}
           </div>
         ) : browsingEntries ? (
           <div className={`directory ${browsingPeople ? 'faces' : 'names'}`}>

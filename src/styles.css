@@ -241,6 +241,19 @@ main {
   white-space: nowrap;
 }
 
+.limit-note {
+  margin: -8px 0 20px;
+  padding: 10px 14px;
+  background: var(--pick);
+  font-size: 14px;
+  font-weight: 600;
+}
+.radarr-note {
+  margin: -10px 0 20px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
 /* The face book */
 .directory.faces {
   display: grid;
