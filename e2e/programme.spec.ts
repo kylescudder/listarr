@@ -90,7 +90,11 @@ test('explores people and collections, paginates and applies discovery filters',
   await expect(
     page.getByRole('heading', { name: 'Dune Collection', exact: true })
   ).toBeVisible()
-  await page.getByRole('button', { name: 'Explore films' }).click()
+  await page
+    .locator('article')
+    .filter({ hasText: 'Dune Collection' })
+    .getByRole('button', { name: 'Explore films' })
+    .click()
   await expect(
     page.getByRole('heading', { name: 'Dune', exact: true })
   ).toBeVisible()

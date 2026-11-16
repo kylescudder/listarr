@@ -53,6 +53,7 @@ function Programme({
   const [year, setYear] = useState('')
   const [sort, setSort] = useState('popularity.desc')
   const [results, setResults] = useState<Result[]>([])
+  const [radarrFiltered, setRadarrFiltered] = useState(false)
   const [page, setPage] = useState(1)
   const [pages, setPages] = useState(1)
   const [endpoint, setEndpoint] = useState('/api/search')
@@ -104,6 +105,7 @@ function Programme({
     json(`${endpoint}?${params}&page=${page}`, { signal: controller.signal })
       .then((data) => {
         setResults(data.results)
+        setRadarrFiltered(Boolean(data.radarrFiltered))
         setPages(Math.min(data.total_pages || 1, 500))
       })
       .catch((err) => {
@@ -330,6 +332,9 @@ function Programme({
                 {loading ? 'Loading…' : `${results.length} on this page`}
               </span>
             </div>
+            {!loading && !error && radarrFiltered && (
+              <p>Films already in Radarr are hidden.</p>
+            )}
             {error ? (
               <div role='alert' className='error'>
                 <h3>Projection paused</h3>

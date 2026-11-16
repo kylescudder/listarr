@@ -24,6 +24,12 @@ films; discovery fixtures match all three upstream filter values. Text-search
 fixtures reject leaked discovery parameters. People fixtures include cast, crew,
 a repeated credit and an adult result to check merge, deduplication and exclusion.
 
+Radarr fixtures include a monitored film with no file, mixed into discovery,
+search, subsequent pages, credits and collection results. A collection containing
+only that film verifies the filtered empty state. `tests/radarr.test.ts` also checks
+fresh library membership, downloaded/unmonitored films, optional configuration,
+URL bases and rejected/unreachable/malformed Radarr responses at the API boundary.
+
 ## Coverage
 
 | Journey                              | Automated checks                                                                                                                                                                               |
